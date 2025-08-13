@@ -188,7 +188,7 @@ function getSearchTerm(place: string, lang: string): string {
 
 export default function PlanetPostcardForge() {
   const [place, setPlace] = useState("");
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const [lang, setLang] = useState<"ja" | "en">("en");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("12:00"); // UTC time
   const [scaleKm, setScaleKm] = useState(200); // width of bbox in km
@@ -447,14 +447,14 @@ export default function PlanetPostcardForge() {
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-sm mb-1">言語 / Language</label>
+              <label className="block text-sm mb-1">Language / 言語</label>
               <select
                 className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3"
                 value={lang}
                 onChange={(e) => setLang(e.target.value as "ja" | "en")}
               >
+                <option value="en">English (Default)</option>
                 <option value="ja">日本語優先</option>
-                <option value="en">English</option>
               </select>
             </div>
             <div className="flex-1">
