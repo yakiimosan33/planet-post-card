@@ -429,7 +429,7 @@ export default function PlanetPostcardForge() {
                 "Tokyo", 
                 "Paris", 
                 "Egypt",
-                "McMurdo Station"
+                "Antarctica"
               ].map((place) => (
                 <button
                   key={place}
@@ -441,7 +441,7 @@ export default function PlanetPostcardForge() {
               ))}
             </div>
             <div className="text-xs opacity-60 mt-1">
-              日本語でも試してみてください: 東京、エジプト、昭和基地
+              Try these locations: Major cities, countries, and continents work great!
             </div>
           </div>
 
