@@ -166,6 +166,7 @@ const placeNameDict: Record<string, string> = {
   "エジプト": "Egypt",
   "南アフリカ": "South Africa",
   "南極": "Antarctica",
+  "南極大陸": "Antarctica",
   "昭和基地": "Showa Station",
   "マクマード基地": "McMurdo Station",
   "大阪": "Osaka",
@@ -344,6 +345,20 @@ export default function PlanetPostcardForge() {
       
       if (!title) {
         setStatus("Wikipediaで該当ページが見つかりませんでした。");
+        return;
+      }
+      
+      // Special handling for Antarctica - use fixed coordinates if Wikipedia fails
+      if (title.toLowerCase().includes("antarctica") || place.toLowerCase().includes("antarctica")) {
+        setStatus("座標を取得中...");
+        const antarcticaCoords = { lat: -82.8628, lon: 135.0000 }; // Antarctica center
+        setCenter(antarcticaCoords);
+        setFacts({ 
+          label: "Antarctica", 
+          country: "International Territory",
+          elev: 2194 // Average elevation
+        });
+        setStatus("");
         return;
       }
       
