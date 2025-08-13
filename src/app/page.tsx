@@ -30,6 +30,7 @@ function buildWvsUrl({
   north,
   east,
   date,
+  time,
   width = 1600,
   height = 900,
   layers = [
@@ -39,11 +40,14 @@ function buildWvsUrl({
   format = "image/png",
 }: {
   south: number; west: number; north: number; east: number;
-  date: string; width?: number; height?: number; layers?: string[]; format?: string;
+  date: string; time?: string; width?: number; height?: number; layers?: string[]; format?: string;
 }) {
+  // Combine date and time for NASA API (YYYY-MM-DDTHH:MM:SSZ)
+  const dateTime = time ? `${date}T${time}:00Z` : date;
+  
   const params = new URLSearchParams({
     REQUEST: "GetSnapshot",
-    TIME: date, // YYYY-MM-DD
+    TIME: dateTime,
     BBOX: `${south},${west},${north},${east}`,
     CRS: "EPSG:4326",
     LAYERS: layers.join(","),
@@ -80,7 +84,7 @@ async function wikiSearchTitle(q: string, lang = "ja") {
   }
   
   // Try to find the best match - prioritize exact matches or shorter titles
-  const exactMatch = results.find((r: any) => 
+  const exactMatch = results.find((r: { title: string }) => 
     r.title.toLowerCase() === q.toLowerCase() ||
     r.title.toLowerCase().includes(q.toLowerCase())
   );
@@ -186,7 +190,8 @@ export default function PlanetPostcardForge() {
   const [place, setPlace] = useState("");
   const [lang, setLang] = useState<"ja" | "en">("ja");
   const [date, setDate] = useState("");
-  const [scaleKm, setScaleKm] = useState(120); // width of bbox in km
+  const [time, setTime] = useState("12:00"); // UTC time
+  const [scaleKm, setScaleKm] = useState(200); // width of bbox in km
   
   // Initialize date on client side to avoid hydration mismatch
   useEffect(() => {
@@ -213,7 +218,7 @@ export default function PlanetPostcardForge() {
 
   const rebuildSnapshot = useCallback(async () => {
     if (!bbox) return;
-    const url = buildWvsUrl({ ...bbox, date, width: 1600, height: 900 });
+    const url = buildWvsUrl({ ...bbox, date, time, width: 1600, height: 900 });
     setSnapshotUrl(url);
     // draw once ready
     const img = new Image();
@@ -284,7 +289,7 @@ export default function PlanetPostcardForge() {
     };
     img.onerror = () => setStatus("画像の取得に失敗しました（ネットワーク/CORSをご確認ください）");
     img.src = url;
-  }, [bbox, date, facts, place, center]);
+  }, [bbox, date, time, facts, place, center]);
 
   // Extend CanvasRenderingContext2D for rounded rect
   useEffect(() => {
@@ -309,7 +314,7 @@ export default function PlanetPostcardForge() {
       console.log(`Searching for: ${place} in ${lang}`);
       
       // Try multiple search strategies for better hit rate
-      let searchTerm = getSearchTerm(place, lang);
+      const searchTerm = getSearchTerm(place, lang);
       console.log(`Original: ${place}, Search term: ${searchTerm}`);
       
       let title = await wikiSearchTitle(searchTerm, lang);
@@ -464,18 +469,80 @@ export default function PlanetPostcardForge() {
             </div>
           </div>
 
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm mb-1">時刻（UTC）</label>
+              <input
+                type="time"
+                className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm mb-1">時間帯の特徴</label>
+              <div className="text-xs bg-white/5 rounded-2xl px-4 py-3 border border-white/10">
+                {(() => {
+                  const hour = parseInt(time.split(':')[0]);
+                  if (hour >= 6 && hour < 12) return "🌅 朝 - 朝日・霧・影が長い";
+                  if (hour >= 12 && hour < 18) return "☀️ 昼 - 最も明るく鮮明";
+                  if (hour >= 18 && hour < 22) return "🌇 夕 - 夕日・暖色系";
+                  return "🌙 夜 - 夜景・都市の光";
+                })()}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1 flex items-center gap-2">
+              クイック時刻選択
+              <span className="text-xs opacity-60">（UTC協定世界時）</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { time: "00:00", label: "🌙 深夜", desc: "夜景" },
+                { time: "06:00", label: "🌅 朝", desc: "朝日" },
+                { time: "12:00", label: "☀️ 正午", desc: "最明" },
+                { time: "18:00", label: "🌇 夕", desc: "夕日" }
+              ].map((t) => (
+                <button
+                  key={t.time}
+                  onClick={() => setTime(t.time)}
+                  className={`px-3 py-1.5 text-xs rounded-xl transition border ${
+                    time === t.time 
+                      ? 'bg-cyan-500/20 border-cyan-400' 
+                      : 'bg-white/10 hover:bg-white/20 border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-[10px] opacity-60 mt-1">
+              ※ 衛星の軌道により、全時間帯の画像が利用できない場合があります
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm mb-1">表示範囲の幅（km）</label>
             <input
               type="range"
               min={20}
-              max={800}
-              step={10}
+              max={5000}
+              step={20}
               value={scaleKm}
               onChange={(e) => setScaleKm(Number(e.target.value))}
               className="w-full"
             />
-            <div className="text-xs opacity-80 mt-1">約 {scaleKm} km 幅</div>
+            <div className="text-xs opacity-80 mt-1 space-y-1">
+              <div>約 {scaleKm.toLocaleString()} km 幅</div>
+              <div className="text-[10px] opacity-60">
+                {scaleKm < 100 ? "🏙️ 都市レベル" :
+                 scaleKm < 500 ? "🏔️ 地域レベル" :
+                 scaleKm < 1500 ? "🗾 国レベル" :
+                 scaleKm < 3000 ? "🌏 大陸レベル" : "🌍 地球規模"}
+              </div>
+            </div>
           </div>
 
           <button
