@@ -443,8 +443,7 @@ export default function PlanetPostcardForge() {
               {[
                 "Tokyo", 
                 "Paris", 
-                "Egypt",
-                "Antarctica"
+                "Egypt"
               ].map((place) => (
                 <button
                   key={place}
